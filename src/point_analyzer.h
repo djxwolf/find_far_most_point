@@ -72,6 +72,7 @@ public:
     PointAnalyzer& operator=(const PointAnalyzer&) = delete;
 
     Point findMostIsolated();
+    std::vector<Point> findTopKIsolated(size_t k);
 
 private:
     std::vector<Point> points_;

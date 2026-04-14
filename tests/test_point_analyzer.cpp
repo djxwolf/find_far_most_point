@@ -90,3 +90,30 @@ TEST(PointAnalyzerTest, FindMostIsolatedEmpty) {
     EXPECT_DOUBLE_EQ(result.x, 0.0);
     EXPECT_DOUBLE_EQ(result.y, 0.0);
 }
+
+TEST(PointAnalyzerTest, FindTopKIsolated) {
+    std::vector<Point> points = {
+        {0, 0}, {0.1, 0.1}, {0.2, 0.2},
+        {5, 5},
+        {3, 3}
+    };
+    PointAnalyzer analyzer(points);
+    auto top3 = analyzer.findTopKIsolated(3);
+    EXPECT_EQ(top3.size(), 3);
+    EXPECT_DOUBLE_EQ(top3[0].x, 5.0);
+    EXPECT_DOUBLE_EQ(top3[1].x, 3.0);
+}
+
+TEST(PointAnalyzerTest, FindTopKIsolatedKGreaterThanPoints) {
+    std::vector<Point> points = {{0, 0}, {1, 1}};
+    PointAnalyzer analyzer(points);
+    auto top5 = analyzer.findTopKIsolated(5);
+    EXPECT_EQ(top5.size(), 2);
+}
+
+TEST(PointAnalyzerTest, FindTopKIsolatedEmpty) {
+    std::vector<Point> points;
+    PointAnalyzer analyzer(points);
+    auto top3 = analyzer.findTopKIsolated(3);
+    EXPECT_TRUE(top3.empty());
+}
