@@ -117,3 +117,29 @@ TEST(PointAnalyzerTest, FindTopKIsolatedEmpty) {
     auto top3 = analyzer.findTopKIsolated(3);
     EXPECT_TRUE(top3.empty());
 }
+
+TEST(PointAnalyzerTest, ComputeStatisticsEmpty) {
+    std::vector<Point> points;
+    PointAnalyzer analyzer(points);
+    Statistics stats = analyzer.computeStatistics();
+    EXPECT_DOUBLE_EQ(stats.minNearestDistance, 0.0);
+}
+
+TEST(PointAnalyzerTest, ComputeStatisticsSinglePoint) {
+    std::vector<Point> points = {{5, 5}};
+    PointAnalyzer analyzer(points);
+    Statistics stats = analyzer.computeStatistics();
+    EXPECT_EQ(stats.distribution.size(), 0);
+}
+
+TEST(PointAnalyzerTest, ComputeStatisticsBasic) {
+    std::vector<Point> points = {
+        {0, 0}, {1, 0}, {0, 1}, {1, 1}
+    };
+    PointAnalyzer analyzer(points);
+    Statistics stats = analyzer.computeStatistics();
+    EXPECT_GT(stats.meanNearestDistance, 0.0);
+    EXPECT_GT(stats.minNearestDistance, 0.0);
+    EXPECT_GT(stats.maxNearestDistance, 0.0);
+    EXPECT_GE(stats.stdDeviation, 0.0);
+}

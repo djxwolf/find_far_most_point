@@ -73,6 +73,7 @@ public:
 
     Point findMostIsolated();
     std::vector<Point> findTopKIsolated(size_t k);
+    Statistics computeStatistics();
 
 private:
     std::vector<Point> points_;

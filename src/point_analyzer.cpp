@@ -2,6 +2,30 @@
 #include <array>
 #include <cmath>
 #include <algorithm>
+#include <numeric>
+
+namespace {
+    double computeMedian(std::vector<double>& v) {
+        if (v.empty()) return 0.0;
+        std::sort(v.begin(), v.end());
+        size_t n = v.size();
+        if (n % 2 == 0) {
+            return (v[n/2 - 1] + v[n/2]) / 2.0;
+        } else {
+            return v[n/2];
+        }
+    }
+
+    double computeStdDev(const std::vector<double>& v, double mean) {
+        if (v.size() <= 1) return 0.0;
+        double sum_sq_diff = 0.0;
+        for (double val : v) {
+            double diff = val - mean;
+            sum_sq_diff += diff * diff;
+        }
+        return std::sqrt(sum_sq_diff / static_cast<double>(v.size()));
+    }
+}
 
 PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
     : points_(points)
@@ -92,4 +116,58 @@ std::vector<Point> PointAnalyzer::findTopKIsolated(size_t k) {
     }
 
     return result;
+}
+
+Statistics PointAnalyzer::computeStatistics() {
+    Statistics stats;
+    if (points_.empty() || points_.size() == 1) {
+        return stats;
+    }
+
+    std::vector<double> nearestDistances;
+    nearestDistances.reserve(points_.size());
+
+    for (size_t i = 0; i < points_.size(); ++i) {
+        const double query_pt[2] = {points_[i].x, points_[i].y};
+        std::array<size_t, 2> indices;
+        std::array<double, 2> distances_sqr;
+        nanoflann::KNNResultSet<double> resultSet(2);
+        resultSet.init(indices.data(), distances_sqr.data());
+        kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
+
+        double minDistance = std::sqrt((indices[0] == i) ? distances_sqr[1] : distances_sqr[0]);
+        nearestDistances.push_back(minDistance);
+    }
+
+    stats.minNearestDistance = *std::min_element(nearestDistances.begin(), nearestDistances.end());
+    stats.maxNearestDistance = *std::max_element(nearestDistances.begin(), nearestDistances.end());
+
+    double sum = std::accumulate(nearestDistances.begin(), nearestDistances.end(), 0.0);
+    stats.meanNearestDistance = sum / static_cast<double>(nearestDistances.size());
+
+    stats.medianNearestDistance = computeMedian(nearestDistances);
+    stats.stdDeviation = computeStdDev(nearestDistances, stats.meanNearestDistance);
+
+    // Create histogram (10 bins)
+    const size_t numBins = 10;
+    double binWidth = (stats.maxNearestDistance - stats.minNearestDistance) / numBins;
+
+    if (binWidth > 0) {
+        std::vector<size_t> binCounts(numBins, 0);
+        for (double dist : nearestDistances) {
+            size_t binIndex = static_cast<size_t>((dist - stats.minNearestDistance) / binWidth);
+            if (binIndex >= numBins) binIndex = numBins - 1;
+            binCounts[binIndex]++;
+        }
+        for (size_t i = 0; i < numBins; ++i) {
+            HistogramBin bin;
+            bin.lowerBound = stats.minNearestDistance + i * binWidth;
+            bin.upperBound = bin.lowerBound + binWidth;
+            bin.count = binCounts[i];
+            bin.percentage = (binCounts[i] * 100.0) / nearestDistances.size();
+            stats.distribution.push_back(bin);
+        }
+    }
+
+    return stats;
 }
