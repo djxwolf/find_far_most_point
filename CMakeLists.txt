@@ -37,3 +37,18 @@ elseif(MSVC)
         /W3 /O2
     )
 endif()
+
+# Testing
+enable_testing()
+find_package(GTest REQUIRED)
+
+set(TEST_SOURCES
+    tests/test_point_analyzer.cpp
+)
+
+add_executable(test_point_analyzer ${TEST_SOURCES})
+target_link_libraries(test_point_analyzer GTest::gtest_main)
+target_include_directories(test_point_analyzer PRIVATE src include)
+
+include(GoogleTest)
+gtest_discover_tests(test_point_analyzer)
