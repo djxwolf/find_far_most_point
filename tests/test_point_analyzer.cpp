@@ -27,3 +27,18 @@ TEST(AnalysisResultTest, DefaultInitialization) {
     EXPECT_TRUE(result.topK.empty());
     EXPECT_DOUBLE_EQ(result.executionTimeMs, 0.0);
 }
+
+TEST(KDTreeAdapterTest, PointCount) {
+    std::vector<Point> points = {{0, 0}, {1, 1}, {2, 2}};
+    KDTreeAdapter adapter(points);
+    EXPECT_EQ(adapter.kdtree_get_point_count(), 3);
+}
+
+TEST(KDTreeAdapterTest, GetPoint) {
+    std::vector<Point> points = {{1.5, 2.5}, {3.5, 4.5}};
+    KDTreeAdapter adapter(points);
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 0), 1.5);  // x of point 0
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 1), 2.5);  // y of point 0
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 0), 3.5);  // x of point 1
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 1), 4.5);  // y of point 1
+}

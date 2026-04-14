@@ -33,4 +33,34 @@ struct AnalysisResult {
     double executionTimeMs = 0.0;
 };
 
+// KD-Tree adapter for nanoflann
+class KDTreeAdapter {
+public:
+    explicit KDTreeAdapter(const std::vector<Point>& points) : pts_(points) {}
+
+    inline size_t kdtree_get_point_count() const {
+        return pts_.size();
+    }
+
+    inline double kdtree_get_pt(const size_t idx, const size_t dim) const {
+        if (dim == 0) return pts_[idx].x;
+        return pts_[idx].y;
+    }
+
+    template <class BBOX>
+    bool kdtree_get_bbox(BBOX&) const {
+        return false;
+    }
+
+private:
+    const std::vector<Point>& pts_;
+};
+
+#include <nanoflann.hpp>
+
+using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
+    nanoflann::L2_Simple_Adaptor<double, KDTreeAdapter>,
+    KDTreeAdapter, 2 /* dimension */
+>;
+
 #endif // POINT_ANALYZER_H
