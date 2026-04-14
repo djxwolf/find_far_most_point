@@ -1,0 +1,137 @@
+{
+  "tests": 19,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "PointTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "DefaultConstruction",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 7
+        },
+        {
+          "name": "ParameterizedConstruction",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 13
+        }
+      ]
+    },
+    {
+      "name": "StatisticsTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "DefaultInitialization",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 19
+        }
+      ]
+    },
+    {
+      "name": "AnalysisResultTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "DefaultInitialization",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 25
+        }
+      ]
+    },
+    {
+      "name": "KDTreeAdapterTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "PointCount",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 34
+        },
+        {
+          "name": "GetPoint",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 40
+        }
+      ]
+    },
+    {
+      "name": "PointAnalyzerTest",
+      "tests": 12,
+      "testsuite": [
+        {
+          "name": "ConstructorWithEmptyPoints",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 49
+        },
+        {
+          "name": "ConstructorWithPoints",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 56
+        },
+        {
+          "name": "FindMostIsolatedSinglePoint",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 63
+        },
+        {
+          "name": "FindMostIsolatedTwoPoints",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 71
+        },
+        {
+          "name": "FindMostIsolatedCluster",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 78
+        },
+        {
+          "name": "FindMostIsolatedEmpty",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 89
+        },
+        {
+          "name": "FindTopKIsolated",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 97
+        },
+        {
+          "name": "FindTopKIsolatedKGreaterThanPoints",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 110
+        },
+        {
+          "name": "FindTopKIsolatedEmpty",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 117
+        },
+        {
+          "name": "ComputeStatisticsEmpty",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 124
+        },
+        {
+          "name": "ComputeStatisticsSinglePoint",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 131
+        },
+        {
+          "name": "ComputeStatisticsBasic",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 138
+        }
+      ]
+    },
+    {
+      "name": "ReportGeneratorTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "GenerateTextReport",
+          "file": "\/Users\/wenjian\/work\/find_far_most_point\/tests\/test_point_analyzer.cpp",
+          "line": 150
+        }
+      ]
+    }
+  ]
+}
