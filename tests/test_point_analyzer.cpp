@@ -1,5 +1,8 @@
 #include <gtest/gtest.h>
 #include "point_analyzer.h"
+#include "report_generator.h"
+#include <sstream>
+#include <string>
 
 TEST(PointTest, DefaultConstruction) {
     Point p;
@@ -142,4 +145,19 @@ TEST(PointAnalyzerTest, ComputeStatisticsBasic) {
     EXPECT_GT(stats.minNearestDistance, 0.0);
     EXPECT_GT(stats.maxNearestDistance, 0.0);
     EXPECT_GE(stats.stdDeviation, 0.0);
+}
+
+TEST(ReportGeneratorTest, GenerateTextReport) {
+    AnalysisResult result;
+    result.mostIsolated = {5.0, 5.0};
+    result.minDistance = 2.5;
+    result.topK = {{5.0, 5.0}, {3.0, 3.0}};
+    result.executionTimeMs = 123.45;
+
+    std::ostringstream oss;
+    ReportGenerator::generate(result, ReportFormat::Text, oss);
+
+    std::string output = oss.str();
+    EXPECT_FALSE(output.empty());
+    EXPECT_NE(output.find("5.00"), std::string::npos);
 }

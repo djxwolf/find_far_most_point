@@ -12,19 +12,22 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Source files
-set(SOURCES
-    src/main.cpp
+set(LIB_SOURCES
     src/point_analyzer.cpp
     src/report_generator.cpp
 )
 
-set(HEADERS
+set(LIB_HEADERS
     src/point_analyzer.h
     src/report_generator.h
 )
 
+set(MAIN_SOURCES
+    src/main.cpp
+)
+
 # Executable
-add_executable(point_analyzer ${SOURCES} ${HEADERS})
+add_executable(point_analyzer ${MAIN_SOURCES} ${LIB_SOURCES} ${LIB_HEADERS})
 
 # Include directories
 target_include_directories(point_analyzer PRIVATE
@@ -51,7 +54,7 @@ set(TEST_SOURCES
     tests/test_point_analyzer.cpp
 )
 
-add_executable(test_point_analyzer ${TEST_SOURCES} ${SOURCES} ${HEADERS})
+add_executable(test_point_analyzer ${TEST_SOURCES} ${LIB_SOURCES} ${LIB_HEADERS})
 target_link_libraries(test_point_analyzer GTest::gtest_main)
 target_include_directories(test_point_analyzer PRIVATE src include)
 
