@@ -63,4 +63,18 @@ using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
     KDTreeAdapter, 2 /* dimension */
 >;
 
+class PointAnalyzer {
+public:
+    explicit PointAnalyzer(const std::vector<Point>& points);
+    ~PointAnalyzer() = default;
+
+    PointAnalyzer(const PointAnalyzer&) = delete;
+    PointAnalyzer& operator=(const PointAnalyzer&) = delete;
+
+private:
+    std::vector<Point> points_;
+    std::unique_ptr<KDTree> kdtree_;
+    KDTreeAdapter adapter_;
+};
+
 #endif // POINT_ANALYZER_H

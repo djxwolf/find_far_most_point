@@ -4,6 +4,11 @@ project(PointAnalyzer VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Fix for CommandLineTools C++ headers issue on macOS
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk/usr/include/c++/v1")
+endif()
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Source files
@@ -46,7 +51,7 @@ set(TEST_SOURCES
     tests/test_point_analyzer.cpp
 )
 
-add_executable(test_point_analyzer ${TEST_SOURCES})
+add_executable(test_point_analyzer ${TEST_SOURCES} ${SOURCES} ${HEADERS})
 target_link_libraries(test_point_analyzer GTest::gtest_main)
 target_include_directories(test_point_analyzer PRIVATE src include)
 

@@ -42,3 +42,17 @@ TEST(KDTreeAdapterTest, GetPoint) {
     EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 0), 3.5);  // x of point 1
     EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 1), 4.5);  // y of point 1
 }
+
+TEST(PointAnalyzerTest, ConstructorWithEmptyPoints) {
+    std::vector<Point> points;
+    EXPECT_NO_THROW({
+        PointAnalyzer analyzer(points);
+    });
+}
+
+TEST(PointAnalyzerTest, ConstructorWithPoints) {
+    std::vector<Point> points = {{0, 0}, {1, 1}, {2, 2}};
+    PointAnalyzer analyzer(points);
+    // Should build KD-Tree without throwing
+    SUCCEED();
+}
