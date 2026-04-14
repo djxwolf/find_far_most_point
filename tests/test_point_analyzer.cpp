@@ -56,3 +56,37 @@ TEST(PointAnalyzerTest, ConstructorWithPoints) {
     // Should build KD-Tree without throwing
     SUCCEED();
 }
+
+TEST(PointAnalyzerTest, FindMostIsolatedSinglePoint) {
+    std::vector<Point> points = {{5, 5}};
+    PointAnalyzer analyzer(points);
+    Point result = analyzer.findMostIsolated();
+    EXPECT_DOUBLE_EQ(result.x, 5.0);
+    EXPECT_DOUBLE_EQ(result.y, 5.0);
+}
+
+TEST(PointAnalyzerTest, FindMostIsolatedTwoPoints) {
+    std::vector<Point> points = {{0, 0}, {10, 10}};
+    PointAnalyzer analyzer(points);
+    Point result = analyzer.findMostIsolated();
+    EXPECT_TRUE(result.x == 0.0 || result.x == 10.0);
+}
+
+TEST(PointAnalyzerTest, FindMostIsolatedCluster) {
+    std::vector<Point> points = {
+        {0, 0}, {0.1, 0.1}, {0.2, 0.2},
+        {5, 5}
+    };
+    PointAnalyzer analyzer(points);
+    Point result = analyzer.findMostIsolated();
+    EXPECT_DOUBLE_EQ(result.x, 5.0);
+    EXPECT_DOUBLE_EQ(result.y, 5.0);
+}
+
+TEST(PointAnalyzerTest, FindMostIsolatedEmpty) {
+    std::vector<Point> points;
+    PointAnalyzer analyzer(points);
+    Point result = analyzer.findMostIsolated();
+    EXPECT_DOUBLE_EQ(result.x, 0.0);
+    EXPECT_DOUBLE_EQ(result.y, 0.0);
+}

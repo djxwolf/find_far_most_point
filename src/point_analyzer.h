@@ -71,6 +71,8 @@ public:
     PointAnalyzer(const PointAnalyzer&) = delete;
     PointAnalyzer& operator=(const PointAnalyzer&) = delete;
 
+    Point findMostIsolated();
+
 private:
     std::vector<Point> points_;
     std::unique_ptr<KDTree> kdtree_;
