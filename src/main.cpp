@@ -58,15 +58,37 @@ CommandLineArgs parseArguments(int argc, char* argv[]) {
     return args;
 }
 
-std::vector<Point> generateRandomPoints(size_t count, unsigned int seed) {
-    std::vector<Point> points;
-    points.reserve(count);
+std::unordered_map<std::string, Point> generateRandomPoints(size_t count, unsigned int seed) {
+    std::unordered_map<std::string, Point> namedPoints;
+    namedPoints.reserve(count);
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<double> dis(0.0, 1.0);
+    std::uniform_real_distribution<double> coord(0.0, 1.0);
+    std::uniform_int_distribution<int> nameType(0, 3);
+
+    const char* prefixes[] = {"U", "IC", "R", "C", "J", "Q", "D", "L", "SW", "BTN"};
+    const char* suffixes[] = {".CLK", ".RST", ".VCC", ".GND", ".EN", ".CS", ".SDA", ".SCL", ""};
+
     for (size_t i = 0; i < count; ++i) {
-        points.push_back({dis(gen), dis(gen)});
+        std::string name;
+        switch (nameType(gen)) {
+            case 0: // short: U1
+                name = std::string(prefixes[gen() % 10]) + std::to_string(i + 1);
+                break;
+            case 1: // medium: IC3.CLK
+                name = std::string(prefixes[gen() % 10]) + std::to_string(i + 1) + suffixes[gen() % 9];
+                break;
+            case 2: // long: U5.PIN_A14
+                name = std::string(prefixes[gen() % 10]) + std::to_string(i + 1) + ".PIN_" +
+                       std::to_string(gen() % 100);
+                break;
+            default: // extra long: PROC_12.DATA_BUS_7
+                name = std::string(prefixes[gen() % 10]) + "_" + std::to_string(i + 1) +
+                       ".DATA_BUS_" + std::to_string(gen() % 64);
+                break;
+        }
+        namedPoints.emplace(std::move(name), Point{coord(gen), coord(gen)});
     }
-    return points;
+    return namedPoints;
 }
 
 // Parse file: auto-detect "name,x,y" (3 fields) vs "x,y" (2 fields)
@@ -122,8 +144,8 @@ int main(int argc, char* argv[]) {
         PointAnalyzer analyzer(namedPoints);
         result = analyzer.analyze(args.topK, !args.noStats);
     } else {
-        auto points = generateRandomPoints(args.count, args.seed);
-        PointAnalyzer analyzer(points);
+        auto namedPoints = generateRandomPoints(args.count, args.seed);
+        PointAnalyzer analyzer(namedPoints);
         result = analyzer.analyze(args.topK, !args.noStats);
     }
 
