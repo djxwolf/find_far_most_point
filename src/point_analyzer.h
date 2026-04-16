@@ -15,6 +15,7 @@ struct NamedPoint {
     std::string name;
     double x = 0.0;
     double y = 0.0;
+    double minDist = 0.0;
 };
 
 struct HistogramBin {

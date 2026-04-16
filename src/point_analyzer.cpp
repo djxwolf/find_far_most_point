@@ -90,7 +90,7 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
             farthestIdx = i;
         }
     }
-    result.mostIsolated = {names_[farthestIdx], points_[farthestIdx].x, points_[farthestIdx].y};
+    result.mostIsolated = {names_[farthestIdx], points_[farthestIdx].x, points_[farthestIdx].y, std::sqrt(maxSqDist)};
     result.minDistance = std::sqrt(maxSqDist);
 
     // Phase 3: top-K (partial_sort on squared distances)
@@ -102,7 +102,7 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
     result.topK.resize(k);
     for (size_t i = 0; i < k; ++i) {
         size_t idx = order[i];
-        result.topK[i] = {names_[idx], points_[idx].x, points_[idx].y};
+        result.topK[i] = {names_[idx], points_[idx].x, points_[idx].y, std::sqrt(sqDists[idx])};
     }
 
     // Phase 4: statistics (optional)

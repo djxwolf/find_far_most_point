@@ -2,8 +2,12 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 namespace {
+    // Box inner width (between ║ and ║)
+    constexpr int W = 63;
+
     std::string createBar(double percentage, int maxWidth = 40) {
         int numChars = static_cast<int>((percentage / 100.0) * maxWidth);
         return std::string(numChars, '#');
@@ -12,91 +16,120 @@ namespace {
     bool hasNames(const AnalysisResult& result) {
         return !result.mostIsolated.name.empty();
     }
+
+    std::string repeat(const std::string& s, int n) {
+        std::string result;
+        result.reserve(s.size() * n);
+        for (int i = 0; i < n; ++i) result += s;
+        return result;
+    }
+
+    // Build a content line: "║ " + content + padding + " ║\n"
+    std::string line(const std::string& content) {
+        int pad = W - 2 - static_cast<int>(content.size());
+        if (pad < 0) pad = 0;
+        return "\u2551 " + content + std::string(pad, ' ') + " \u2551\n";
+    }
+
+    // Fixed border lines
+    const std::string DH = "\xE2\x95\x90";  // ═ (U+2550)
+    const std::string topBorder    = "\xE2\x95\x94" + repeat(DH, W) + "\xE2\x95\x97\n";
+    const std::string midBorder    = "\xE2\x95\xA0" + repeat(DH, W) + "\xE2\x95\xA3\n";
+    const std::string bottomBorder = "\xE2\x95\x9A" + repeat(DH, W) + "\xE2\x95\x9D\n";
+
+    std::string fmt(double val, int prec) {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(prec) << val;
+        return oss.str();
+    }
 }
 
 void ReportGenerator::generate(const AnalysisResult& result,
                               ReportFormat format,
                               std::ostream& out) {
     if (format == ReportFormat::Text) {
-        out << "\n";
-        out << "╔═══════════════════════════════════════════════════════════════╗\n";
-        out << "║                    POINT ANALYSIS REPORT                     ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║ Execution Time:        " << std::fixed << std::setprecision(2)
-            << result.executionTimeMs << " ms                           ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║ MOST ISOLATED POINT                                          ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
+        out << "\n" << topBorder;
+        out << line("              POINT ANALYSIS REPORT");
+        out << midBorder;
+        out << line("Execution Time:        " + fmt(result.executionTimeMs, 2) + " ms");
+        out << midBorder;
+        out << line("MOST ISOLATED POINT");
+        out << midBorder;
         if (hasNames(result)) {
-            out << "║ Name:                  " << result.mostIsolated.name << "\n";
+            out << line("Name:                  " + result.mostIsolated.name);
         }
-        out << "║ Coordinates:           (" << std::setprecision(6)
-            << result.mostIsolated.x << ", " << result.mostIsolated.y << ")       ║\n";
-        out << "║ Min Neighbor Distance: " << std::setprecision(6)
-            << result.minDistance << "                             ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║ TOP " << std::setw(2) << result.topK.size()
-            << " MOST ISOLATED POINTS                                  ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
+        out << line("Coordinates:           (" + fmt(result.mostIsolated.x, 6)
+            + ", " + fmt(result.mostIsolated.y, 6) + ")");
+        out << line("Min Neighbor Distance: " + fmt(result.minDistance, 6));
+        out << midBorder;
 
+        // Top-K header
+        std::ostringstream header;
+        header << "TOP " << std::setw(2) << std::min(result.topK.size(), size_t(99))
+               << " MOST ISOLATED POINTS";
+        out << line(header.str());
+        out << midBorder;
+
+        // Table header
         if (hasNames(result)) {
-            out << "║  Rank │ Name             │ Min Dist   │ Percentile          ║\n";
-            out << "║ ├──────┼──────────────────┼────────────┼─────────────────────║\n";
+            out << line(" Rank  Name              Dist       Pct");
         } else {
-            out << "║  Rank │ Coordinates       │ Min Dist   │ Percentile          ║\n";
-            out << "║ ├──────┼───────────────────┼────────────┼─────────────────────║\n";
+            out << line(" Rank  Coordinates        Dist       Pct");
         }
 
+        // Table rows
         for (size_t i = 0; i < std::min(result.topK.size(), size_t(10)); ++i) {
-            double percentile = 100.0 * (1.0 - static_cast<double>(i) / result.topK.size());
-            out << "║  " << std::setw(4) << (i + 1) << " │ ";
+            double pct = 100.0 * (1.0 - static_cast<double>(i) / result.topK.size());
+            std::ostringstream row;
+            row << " " << std::setw(4) << (i + 1) << "  ";
             if (hasNames(result)) {
-                out << std::left << std::setw(16) << result.topK[i].name << std::right
-                    << " │ " << std::setprecision(4) << result.topK[i].x << "    │ "
-                    << std::setprecision(2) << percentile << "%               ║\n";
+                row << std::left << std::setw(18) << result.topK[i].name << std::right;
             } else {
-                out << "(" << std::setprecision(3) << result.topK[i].x << ", "
-                    << result.topK[i].y << ") │ "
-                    << std::setprecision(4) << result.minDistance * (1.0 + i * 0.1) << "    │ "
-                    << std::setprecision(2) << percentile << "%               ║\n";
+                row << "(" << fmt(result.topK[i].x, 3) << ", "
+                    << fmt(result.topK[i].y, 3) << ")";
+                // pad to 18 chars
+                std::string coord = row.str().substr(6);
+                row.str("");
+                row << " " << std::setw(4) << (i + 1) << "  ";
+                row << std::left << std::setw(18) << coord << std::right;
             }
+            row << fmt(result.topK[i].minDist, 4) << "    "
+                << fmt(pct, 1) << "%";
+            out << line(row.str());
         }
 
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
+        out << midBorder;
 
+        // Statistics
         if (result.hasStats) {
-            out << "║ DISTANCE STATISTICS                                           ║\n";
-            out << "╠═══════════════════════════════════════════════════════════════╣\n";
-            out << "║ Min Nearest Distance:   " << std::setprecision(6)
-                << result.stats.minNearestDistance << "                             ║\n";
-            out << "║ Max Nearest Distance:   " << std::setprecision(6)
-                << result.stats.maxNearestDistance << "                             ║\n";
-            out << "║ Mean Nearest Distance:  " << std::setprecision(6)
-                << result.stats.meanNearestDistance << "                             ║\n";
-            out << "║ Median Nearest Dist:    " << std::setprecision(6)
-                << result.stats.medianNearestDistance << "                             ║\n";
-            out << "║ Std Deviation:          " << std::setprecision(6)
-                << result.stats.stdDeviation << "                             ║\n";
+            out << line("DISTANCE STATISTICS");
+            out << midBorder;
+            out << line("Min Nearest Distance:   " + fmt(result.stats.minNearestDistance, 6));
+            out << line("Max Nearest Distance:   " + fmt(result.stats.maxNearestDistance, 6));
+            out << line("Mean Nearest Distance:  " + fmt(result.stats.meanNearestDistance, 6));
+            out << line("Median Nearest Dist:    " + fmt(result.stats.medianNearestDistance, 6));
+            out << line("Std Deviation:          " + fmt(result.stats.stdDeviation, 6));
 
             if (!result.stats.distribution.empty()) {
-                out << "╠═══════════════════════════════════════════════════════════════╣\n";
-                out << "║ DISTANCE DISTRIBUTION (" << result.stats.distribution.size()
-                    << " bins)                              ║\n";
-                out << "╠═══════════════════════════════════════════════════════════════╣\n";
+                out << midBorder;
+                std::ostringstream distTitle;
+                distTitle << "DISTANCE DISTRIBUTION (" << result.stats.distribution.size() << " bins)";
+                out << line(distTitle.str());
+                out << midBorder;
 
                 for (const auto& bin : result.stats.distribution) {
-                    std::ostringstream range;
-                    range << std::fixed << std::setprecision(4)
-                          << bin.lowerBound << " - " << bin.upperBound << ")";
-                    out << "║ [" << range.str() << "]  "
-                        << createBar(bin.percentage) << "  "
-                        << std::setprecision(1) << bin.percentage << "%              ║\n";
+                    std::ostringstream entry;
+                    entry << std::fixed << std::setprecision(4)
+                          << "[" << bin.lowerBound << " - " << bin.upperBound << ")  "
+                          << createBar(bin.percentage) << "  "
+                          << std::setprecision(1) << bin.percentage << "%";
+                    out << line(entry.str());
                 }
             }
         }
 
-        out << "╚═══════════════════════════════════════════════════════════════╝\n";
-        out << "\n";
+        out << bottomBorder << "\n";
+
     } else if (format == ReportFormat::JSON) {
         out << "{}\n";
     } else if (format == ReportFormat::CSV) {
