@@ -30,6 +30,7 @@ struct AnalysisResult {
     double minDistance = 0.0;
     std::vector<Point> topK;
     Statistics stats;
+    bool hasStats = false;
     double executionTimeMs = 0.0;
 };
 
@@ -66,7 +67,7 @@ public:
     PointAnalyzer(const PointAnalyzer&) = delete;
     PointAnalyzer& operator=(const PointAnalyzer&) = delete;
 
-    AnalysisResult analyze(size_t topK = 10);
+    AnalysisResult analyze(size_t topK = 10, bool computeStats = true);
 
 private:
     std::vector<Point> points_;

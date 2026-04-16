@@ -36,7 +36,7 @@ PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
     }
 }
 
-AnalysisResult PointAnalyzer::analyze(size_t topK) {
+AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
     AnalysisResult result;
     const size_t n = points_.size();
 
@@ -98,41 +98,43 @@ AnalysisResult PointAnalyzer::analyze(size_t topK) {
         result.topK[i] = points_[order[i]];
     }
 
-    // Phase 4: statistics (sqrt once, then aggregate)
-    std::vector<double> dists(n);
-    for (size_t i = 0; i < n; ++i) {
-        dists[i] = std::sqrt(sqDists[i]);
-    }
-
-    auto& stats = result.stats;
-    stats.minNearestDistance = *std::min_element(dists.begin(), dists.end());
-    stats.maxNearestDistance = *std::max_element(dists.begin(), dists.end());
-
-    double sum = 0.0;
-    for (double d : dists) sum += d;
-    stats.meanNearestDistance = sum / static_cast<double>(n);
-
-    stats.medianNearestDistance = computeMedian(dists);
-    stats.stdDeviation = computeStdDev(dists, stats.meanNearestDistance);
-
-    // Histogram (10 bins)
-    const size_t numBins = 10;
-    double binWidth = (stats.maxNearestDistance - stats.minNearestDistance) / static_cast<double>(numBins);
-    if (binWidth > 0) {
-        std::vector<size_t> binCounts(numBins, 0);
-        for (double d : dists) {
-            size_t bin = static_cast<size_t>((d - stats.minNearestDistance) / binWidth);
-            if (bin >= numBins) bin = numBins - 1;
-            binCounts[bin]++;
+    // Phase 4: statistics (optional)
+    if (computeStats) {
+        result.hasStats = true;
+        std::vector<double> dists(n);
+        for (size_t i = 0; i < n; ++i) {
+            dists[i] = std::sqrt(sqDists[i]);
         }
-        stats.distribution.reserve(numBins);
-        for (size_t i = 0; i < numBins; ++i) {
-            HistogramBin bin;
-            bin.lowerBound = stats.minNearestDistance + i * binWidth;
-            bin.upperBound = bin.lowerBound + binWidth;
-            bin.count = binCounts[i];
-            bin.percentage = (binCounts[i] * 100.0) / static_cast<double>(n);
-            stats.distribution.push_back(bin);
+
+        auto& stats = result.stats;
+        stats.minNearestDistance = *std::min_element(dists.begin(), dists.end());
+        stats.maxNearestDistance = *std::max_element(dists.begin(), dists.end());
+
+        double sum = 0.0;
+        for (double d : dists) sum += d;
+        stats.meanNearestDistance = sum / static_cast<double>(n);
+
+        stats.medianNearestDistance = computeMedian(dists);
+        stats.stdDeviation = computeStdDev(dists, stats.meanNearestDistance);
+
+        const size_t numBins = 10;
+        double binWidth = (stats.maxNearestDistance - stats.minNearestDistance) / static_cast<double>(numBins);
+        if (binWidth > 0) {
+            std::vector<size_t> binCounts(numBins, 0);
+            for (double d : dists) {
+                size_t bin = static_cast<size_t>((d - stats.minNearestDistance) / binWidth);
+                if (bin >= numBins) bin = numBins - 1;
+                binCounts[bin]++;
+            }
+            stats.distribution.reserve(numBins);
+            for (size_t i = 0; i < numBins; ++i) {
+                HistogramBin bin;
+                bin.lowerBound = stats.minNearestDistance + i * binWidth;
+                bin.upperBound = bin.lowerBound + binWidth;
+                bin.count = binCounts[i];
+                bin.percentage = (binCounts[i] * 100.0) / static_cast<double>(n);
+                stats.distribution.push_back(bin);
+            }
         }
     }
 

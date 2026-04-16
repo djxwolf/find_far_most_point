@@ -44,32 +44,35 @@ void ReportGenerator::generate(const AnalysisResult& result,
         }
 
         out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║ DISTANCE STATISTICS                                           ║\n";
-        out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║ Min Nearest Distance:   " << std::setprecision(6)
-            << result.stats.minNearestDistance << "                             ║\n";
-        out << "║ Max Nearest Distance:   " << std::setprecision(6)
-            << result.stats.maxNearestDistance << "                             ║\n";
-        out << "║ Mean Nearest Distance:  " << std::setprecision(6)
-            << result.stats.meanNearestDistance << "                             ║\n";
-        out << "║ Median Nearest Dist:    " << std::setprecision(6)
-            << result.stats.medianNearestDistance << "                             ║\n";
-        out << "║ Std Deviation:          " << std::setprecision(6)
-            << result.stats.stdDeviation << "                             ║\n";
 
-        if (!result.stats.distribution.empty()) {
+        if (result.hasStats) {
+            out << "║ DISTANCE STATISTICS                                           ║\n";
             out << "╠═══════════════════════════════════════════════════════════════╣\n";
-            out << "║ DISTANCE DISTRIBUTION (" << result.stats.distribution.size()
-                << " bins)                              ║\n";
-            out << "╠═══════════════════════════════════════════════════════════════╣\n";
+            out << "║ Min Nearest Distance:   " << std::setprecision(6)
+                << result.stats.minNearestDistance << "                             ║\n";
+            out << "║ Max Nearest Distance:   " << std::setprecision(6)
+                << result.stats.maxNearestDistance << "                             ║\n";
+            out << "║ Mean Nearest Distance:  " << std::setprecision(6)
+                << result.stats.meanNearestDistance << "                             ║\n";
+            out << "║ Median Nearest Dist:    " << std::setprecision(6)
+                << result.stats.medianNearestDistance << "                             ║\n";
+            out << "║ Std Deviation:          " << std::setprecision(6)
+                << result.stats.stdDeviation << "                             ║\n";
 
-            for (const auto& bin : result.stats.distribution) {
-                std::ostringstream range;
-                range << std::fixed << std::setprecision(4)
-                      << bin.lowerBound << " - " << bin.upperBound << ")";
-                out << "║ [" << range.str() << "]  "
-                    << createBar(bin.percentage) << "  "
-                    << std::setprecision(1) << bin.percentage << "%              ║\n";
+            if (!result.stats.distribution.empty()) {
+                out << "╠═══════════════════════════════════════════════════════════════╣\n";
+                out << "║ DISTANCE DISTRIBUTION (" << result.stats.distribution.size()
+                    << " bins)                              ║\n";
+                out << "╠═══════════════════════════════════════════════════════════════╣\n";
+
+                for (const auto& bin : result.stats.distribution) {
+                    std::ostringstream range;
+                    range << std::fixed << std::setprecision(4)
+                          << bin.lowerBound << " - " << bin.upperBound << ")";
+                    out << "║ [" << range.str() << "]  "
+                        << createBar(bin.percentage) << "  "
+                        << std::setprecision(1) << bin.percentage << "%              ║\n";
+                }
             }
         }
 

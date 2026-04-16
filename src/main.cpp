@@ -14,6 +14,7 @@ struct CommandLineArgs {
     unsigned int seed = std::random_device{}();
     std::string inputFile;
     size_t topK = 10;
+    bool noStats = false;
 };
 
 void printUsage(const char* programName) {
@@ -23,6 +24,7 @@ void printUsage(const char* programName) {
               << "  --seed N          Random seed (default: random)\n"
               << "  --input FILE      Read points from file (one per line: x,y)\n"
               << "  --topK N          Show top N most isolated points (default: 10)\n"
+              << "  --no-stats        Skip statistics and histogram\n"
               << "  --help            Show this help message\n\n"
               << "Examples:\n"
               << "  " << programName << " --count 1000000 --seed 42\n"
@@ -44,6 +46,8 @@ CommandLineArgs parseArguments(int argc, char* argv[]) {
             args.inputFile = argv[++i];
         } else if (arg == "--topK" && i + 1 < argc) {
             args.topK = std::stoull(argv[++i]);
+        } else if (arg == "--no-stats") {
+            args.noStats = true;
         } else {
             std::cerr << "Unknown option: " << arg << "\n";
             printUsage(argv[0]);
@@ -101,7 +105,7 @@ int main(int argc, char* argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     PointAnalyzer analyzer(points);
-    AnalysisResult result = analyzer.analyze(args.topK);
+    AnalysisResult result = analyzer.analyze(args.topK, !args.noStats);
 
     auto endTime = std::chrono::high_resolution_clock::now();
     result.executionTimeMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
