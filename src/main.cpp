@@ -5,6 +5,7 @@
 #include <chrono>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 
 #include "point_analyzer.h"
 #include "report_generator.h"
@@ -22,13 +23,13 @@ void printUsage(const char* programName) {
               << "Options:\n"
               << "  --count N         Generate N random points (default: 10000)\n"
               << "  --seed N          Random seed (default: random)\n"
-              << "  --input FILE      Read points from file (one per line: x,y)\n"
+              << "  --input FILE      Read points from file (one per line: name,x,y or x,y)\n"
               << "  --topK N          Show top N most isolated points (default: 10)\n"
               << "  --no-stats        Skip statistics and histogram\n"
               << "  --help            Show this help message\n\n"
               << "Examples:\n"
               << "  " << programName << " --count 1000000 --seed 42\n"
-              << "  " << programName << " --input data/points.txt\n";
+              << "  " << programName << " --input data/pins.txt\n";
 }
 
 CommandLineArgs parseArguments(int argc, char* argv[]) {
@@ -68,44 +69,63 @@ std::vector<Point> generateRandomPoints(size_t count, unsigned int seed) {
     return points;
 }
 
-std::vector<Point> readPointsFromFile(const std::string& filename) {
-    std::vector<Point> points;
+// Parse file: auto-detect "name,x,y" (3 fields) vs "x,y" (2 fields)
+std::unordered_map<std::string, Point> readPointsFromFile(const std::string& filename) {
+    std::unordered_map<std::string, Point> namedPoints;
     std::ifstream file(filename);
     if (!file) {
         std::cerr << "Error: Cannot open file: " << filename << "\n";
-        return points;
+        return namedPoints;
     }
+
     std::string line;
+    size_t lineNum = 0;
     while (std::getline(file, line)) {
         if (line.empty()) continue;
+        ++lineNum;
+
         std::istringstream iss(line);
-        char comma;
-        Point p;
-        if (iss >> p.x >> comma >> p.y && comma == ',') {
-            points.push_back(p);
+        std::string f1, f2, f3;
+        if (std::getline(iss, f1, ',') && std::getline(iss, f2, ',') && std::getline(iss, f3)) {
+            // 3 fields: name,x,y
+            try {
+                namedPoints[f1] = {std::stod(f2), std::stod(f3)};
+            } catch (...) {
+                std::cerr << "Warning: skipping malformed line " << lineNum << "\n";
+            }
+        } else {
+            // 2 fields: x,y (auto-generate name)
+            iss.clear();
+            iss.str(line);
+            char comma;
+            Point p;
+            if (iss >> p.x >> comma >> p.y && comma == ',') {
+                namedPoints["P" + std::to_string(lineNum)] = p;
+            }
         }
     }
-    return points;
+    return namedPoints;
 }
 
 int main(int argc, char* argv[]) {
     CommandLineArgs args = parseArguments(argc, argv);
 
-    std::vector<Point> points;
+    auto startTime = std::chrono::high_resolution_clock::now();
+
+    AnalysisResult result;
     if (!args.inputFile.empty()) {
-        points = readPointsFromFile(args.inputFile);
-        if (points.empty()) {
+        auto namedPoints = readPointsFromFile(args.inputFile);
+        if (namedPoints.empty()) {
             std::cerr << "Error: No points loaded from file\n";
             return 1;
         }
+        PointAnalyzer analyzer(namedPoints);
+        result = analyzer.analyze(args.topK, !args.noStats);
     } else {
-        points = generateRandomPoints(args.count, args.seed);
+        auto points = generateRandomPoints(args.count, args.seed);
+        PointAnalyzer analyzer(points);
+        result = analyzer.analyze(args.topK, !args.noStats);
     }
-
-    auto startTime = std::chrono::high_resolution_clock::now();
-
-    PointAnalyzer analyzer(points);
-    AnalysisResult result = analyzer.analyze(args.topK, !args.noStats);
 
     auto endTime = std::chrono::high_resolution_clock::now();
     result.executionTimeMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();

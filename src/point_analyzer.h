@@ -2,9 +2,17 @@
 #define POINT_ANALYZER_H
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 #include <memory>
 
 struct Point {
+    double x = 0.0;
+    double y = 0.0;
+};
+
+struct NamedPoint {
+    std::string name;
     double x = 0.0;
     double y = 0.0;
 };
@@ -26,9 +34,9 @@ struct Statistics {
 };
 
 struct AnalysisResult {
-    Point mostIsolated{0.0, 0.0};
+    NamedPoint mostIsolated;
     double minDistance = 0.0;
-    std::vector<Point> topK;
+    std::vector<NamedPoint> topK;
     Statistics stats;
     bool hasStats = false;
     double executionTimeMs = 0.0;
@@ -61,6 +69,7 @@ using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
 
 class PointAnalyzer {
 public:
+    explicit PointAnalyzer(const std::unordered_map<std::string, Point>& namedPoints);
     explicit PointAnalyzer(const std::vector<Point>& points);
     ~PointAnalyzer() = default;
 
@@ -71,8 +80,11 @@ public:
 
 private:
     std::vector<Point> points_;
+    std::vector<std::string> names_;
     std::unique_ptr<KDTree> kdtree_;
     KDTreeAdapter adapter_;
+
+    void buildIndex();
 };
 
 #endif // POINT_ANALYZER_H

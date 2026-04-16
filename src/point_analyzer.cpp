@@ -24,10 +24,7 @@ namespace {
     }
 }
 
-PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
-    : points_(points)
-    , adapter_(points_)
-{
+void PointAnalyzer::buildIndex() {
     if (!points_.empty()) {
         kdtree_ = std::make_unique<KDTree>(
             2, adapter_, nanoflann::KDTreeSingleIndexAdaptorParams(10)
@@ -36,15 +33,35 @@ PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
     }
 }
 
+PointAnalyzer::PointAnalyzer(const std::unordered_map<std::string, Point>& namedPoints)
+    : adapter_(points_)
+{
+    points_.reserve(namedPoints.size());
+    names_.reserve(namedPoints.size());
+    for (const auto& [name, pt] : namedPoints) {
+        names_.push_back(name);
+        points_.push_back(pt);
+    }
+    buildIndex();
+}
+
+PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
+    : points_(points)
+    , names_(points.size())
+    , adapter_(points_)
+{
+    buildIndex();
+}
+
 AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
     AnalysisResult result;
     const size_t n = points_.size();
 
     if (n == 0) return result;
     if (n == 1) {
-        result.mostIsolated = points_[0];
+        result.mostIsolated = {names_[0], points_[0].x, points_[0].y};
         result.minDistance = 0.0;
-        result.topK.push_back(points_[0]);
+        result.topK.push_back({names_[0], points_[0].x, points_[0].y});
         return result;
     }
 
@@ -84,7 +101,7 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
             farthestIdx = i;
         }
     }
-    result.mostIsolated = points_[farthestIdx];
+    result.mostIsolated = {names_[farthestIdx], points_[farthestIdx].x, points_[farthestIdx].y};
     result.minDistance = std::sqrt(maxSqDist);
 
     // Phase 3: top-K (partial_sort on squared distances)
@@ -95,7 +112,8 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
         [&sqDists](size_t a, size_t b) { return sqDists[a] > sqDists[b]; });
     result.topK.resize(k);
     for (size_t i = 0; i < k; ++i) {
-        result.topK[i] = points_[order[i]];
+        size_t idx = order[i];
+        result.topK[i] = {names_[idx], points_[idx].x, points_[idx].y};
     }
 
     // Phase 4: statistics (optional)

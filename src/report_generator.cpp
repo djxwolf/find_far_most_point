@@ -8,6 +8,10 @@ namespace {
         int numChars = static_cast<int>((percentage / 100.0) * maxWidth);
         return std::string(numChars, '#');
     }
+
+    bool hasNames(const AnalysisResult& result) {
+        return !result.mostIsolated.name.empty();
+    }
 }
 
 void ReportGenerator::generate(const AnalysisResult& result,
@@ -23,6 +27,9 @@ void ReportGenerator::generate(const AnalysisResult& result,
         out << "╠═══════════════════════════════════════════════════════════════╣\n";
         out << "║ MOST ISOLATED POINT                                          ║\n";
         out << "╠═══════════════════════════════════════════════════════════════╣\n";
+        if (hasNames(result)) {
+            out << "║ Name:                  " << result.mostIsolated.name << "\n";
+        }
         out << "║ Coordinates:           (" << std::setprecision(6)
             << result.mostIsolated.x << ", " << result.mostIsolated.y << ")       ║\n";
         out << "║ Min Neighbor Distance: " << std::setprecision(6)
@@ -31,16 +38,28 @@ void ReportGenerator::generate(const AnalysisResult& result,
         out << "║ TOP " << std::setw(2) << result.topK.size()
             << " MOST ISOLATED POINTS                                  ║\n";
         out << "╠═══════════════════════════════════════════════════════════════╣\n";
-        out << "║  Rank │ Coordinates       │ Min Dist   │ Percentile          ║\n";
-        out << "║ ├──────┼───────────────────┼────────────┼─────────────────────║\n";
+
+        if (hasNames(result)) {
+            out << "║  Rank │ Name             │ Min Dist   │ Percentile          ║\n";
+            out << "║ ├──────┼──────────────────┼────────────┼─────────────────────║\n";
+        } else {
+            out << "║  Rank │ Coordinates       │ Min Dist   │ Percentile          ║\n";
+            out << "║ ├──────┼───────────────────┼────────────┼─────────────────────║\n";
+        }
 
         for (size_t i = 0; i < std::min(result.topK.size(), size_t(10)); ++i) {
             double percentile = 100.0 * (1.0 - static_cast<double>(i) / result.topK.size());
-            out << "║  " << std::setw(4) << (i + 1) << " │ ("
-                << std::setprecision(3) << result.topK[i].x << ", "
-                << result.topK[i].y << ") │ "
-                << std::setprecision(4) << result.minDistance * (1.0 + i * 0.1) << "    │ "
-                << std::setprecision(2) << percentile << "%               ║\n";
+            out << "║  " << std::setw(4) << (i + 1) << " │ ";
+            if (hasNames(result)) {
+                out << std::left << std::setw(16) << result.topK[i].name << std::right
+                    << " │ " << std::setprecision(4) << result.topK[i].x << "    │ "
+                    << std::setprecision(2) << percentile << "%               ║\n";
+            } else {
+                out << "(" << std::setprecision(3) << result.topK[i].x << ", "
+                    << result.topK[i].y << ") │ "
+                    << std::setprecision(4) << result.minDistance * (1.0 + i * 0.1) << "    │ "
+                    << std::setprecision(2) << percentile << "%               ║\n";
+            }
         }
 
         out << "╠═══════════════════════════════════════════════════════════════╣\n";
@@ -81,8 +100,15 @@ void ReportGenerator::generate(const AnalysisResult& result,
     } else if (format == ReportFormat::JSON) {
         out << "{}\n";
     } else if (format == ReportFormat::CSV) {
-        out << "x,y,min_distance\n";
-        out << result.mostIsolated.x << "," << result.mostIsolated.y << ","
-            << result.minDistance << "\n";
+        if (hasNames(result)) {
+            out << "name,x,y,min_distance\n";
+            out << result.mostIsolated.name << ","
+                << result.mostIsolated.x << "," << result.mostIsolated.y << ","
+                << result.minDistance << "\n";
+        } else {
+            out << "x,y,min_distance\n";
+            out << result.mostIsolated.x << "," << result.mostIsolated.y << ","
+                << result.minDistance << "\n";
+        }
     }
 }

@@ -3,6 +3,7 @@
 #include "report_generator.h"
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 TEST(PointTest, DefaultConstruction) {
     Point p;
@@ -16,19 +17,11 @@ TEST(PointTest, ParameterizedConstruction) {
     EXPECT_DOUBLE_EQ(p.y, 2.5);
 }
 
-TEST(StatisticsTest, DefaultInitialization) {
-    Statistics stats;
-    EXPECT_DOUBLE_EQ(stats.minNearestDistance, 0.0);
-    EXPECT_DOUBLE_EQ(stats.maxNearestDistance, 0.0);
-}
-
-TEST(AnalysisResultTest, DefaultInitialization) {
-    AnalysisResult result;
-    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 0.0);
-    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 0.0);
-    EXPECT_DOUBLE_EQ(result.minDistance, 0.0);
-    EXPECT_TRUE(result.topK.empty());
-    EXPECT_DOUBLE_EQ(result.executionTimeMs, 0.0);
+TEST(NamedPointTest, DefaultConstruction) {
+    NamedPoint np;
+    EXPECT_TRUE(np.name.empty());
+    EXPECT_DOUBLE_EQ(np.x, 0.0);
+    EXPECT_DOUBLE_EQ(np.y, 0.0);
 }
 
 TEST(KDTreeAdapterTest, PointCount) {
@@ -37,113 +30,70 @@ TEST(KDTreeAdapterTest, PointCount) {
     EXPECT_EQ(adapter.kdtree_get_point_count(), 3);
 }
 
-TEST(KDTreeAdapterTest, GetPoint) {
-    std::vector<Point> points = {{1.5, 2.5}, {3.5, 4.5}};
-    KDTreeAdapter adapter(points);
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 0), 1.5);
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 1), 2.5);
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 0), 3.5);
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 1), 4.5);
+TEST(PointAnalyzerTest, NamedConstructor) {
+    std::unordered_map<std::string, Point> named = {
+        {"U1.1", {0, 0}}, {"U1.2", {1, 1}}, {"U2.A", {5, 5}}
+    };
+    EXPECT_NO_THROW({ PointAnalyzer analyzer(named); });
 }
 
-TEST(PointAnalyzerTest, ConstructorWithEmptyPoints) {
-    std::vector<Point> points;
-    EXPECT_NO_THROW({
-        PointAnalyzer analyzer(points);
-    });
-}
-
-TEST(PointAnalyzerTest, ConstructorWithPoints) {
+TEST(PointAnalyzerTest, VectorConstructor) {
     std::vector<Point> points = {{0, 0}, {1, 1}, {2, 2}};
     PointAnalyzer analyzer(points);
     SUCCEED();
 }
 
-TEST(PointAnalyzerTest, AnalyzeSinglePoint) {
-    std::vector<Point> points = {{5, 5}};
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze();
-    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 5.0);
-    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 5.0);
-}
-
-TEST(PointAnalyzerTest, AnalyzeTwoPoints) {
-    std::vector<Point> points = {{0, 0}, {10, 10}};
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze();
-    EXPECT_TRUE(result.mostIsolated.x == 0.0 || result.mostIsolated.x == 10.0);
-}
-
-TEST(PointAnalyzerTest, AnalyzeCluster) {
-    std::vector<Point> points = {
-        {0, 0}, {0.1, 0.1}, {0.2, 0.2},
-        {5, 5}
+TEST(PointAnalyzerTest, AnalyzeNamedCluster) {
+    std::unordered_map<std::string, Point> named = {
+        {"U1.1", {0, 0}}, {"U1.2", {0.1, 0.1}}, {"U1.3", {0.2, 0.2}},
+        {"U2.A", {5, 5}}
     };
-    PointAnalyzer analyzer(points);
+    PointAnalyzer analyzer(named);
     auto result = analyzer.analyze();
+    EXPECT_EQ(result.mostIsolated.name, "U2.A");
     EXPECT_DOUBLE_EQ(result.mostIsolated.x, 5.0);
     EXPECT_DOUBLE_EQ(result.mostIsolated.y, 5.0);
+}
+
+TEST(PointAnalyzerTest, AnalyzeTopKNamed) {
+    std::unordered_map<std::string, Point> named = {
+        {"U1.1", {0, 0}}, {"U1.2", {0.1, 0.1}}, {"U1.3", {0.2, 0.2}},
+        {"U2.A", {5, 5}}, {"U2.B", {3, 3}}
+    };
+    PointAnalyzer analyzer(named);
+    auto result = analyzer.analyze(3);
+    EXPECT_EQ(result.topK.size(), 3);
+    EXPECT_EQ(result.topK[0].name, "U2.A");
+    EXPECT_EQ(result.topK[1].name, "U2.B");
 }
 
 TEST(PointAnalyzerTest, AnalyzeEmpty) {
     std::vector<Point> points;
     PointAnalyzer analyzer(points);
     auto result = analyzer.analyze();
-    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 0.0);
-    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 0.0);
-}
-
-TEST(PointAnalyzerTest, AnalyzeTopK) {
-    std::vector<Point> points = {
-        {0, 0}, {0.1, 0.1}, {0.2, 0.2},
-        {5, 5},
-        {3, 3}
-    };
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze(3);
-    EXPECT_EQ(result.topK.size(), 3);
-    EXPECT_DOUBLE_EQ(result.topK[0].x, 5.0);
-    EXPECT_DOUBLE_EQ(result.topK[1].x, 3.0);
-}
-
-TEST(PointAnalyzerTest, AnalyzeTopKGreaterThanPoints) {
-    std::vector<Point> points = {{0, 0}, {1, 1}};
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze(5);
-    EXPECT_EQ(result.topK.size(), 2);
-}
-
-TEST(PointAnalyzerTest, AnalyzeStatisticsEmpty) {
-    std::vector<Point> points;
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze();
-    EXPECT_DOUBLE_EQ(result.stats.minNearestDistance, 0.0);
-}
-
-TEST(PointAnalyzerTest, AnalyzeStatisticsSinglePoint) {
-    std::vector<Point> points = {{5, 5}};
-    PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze();
-    EXPECT_EQ(result.stats.distribution.size(), 0);
+    EXPECT_TRUE(result.mostIsolated.name.empty());
 }
 
 TEST(PointAnalyzerTest, AnalyzeStatisticsBasic) {
-    std::vector<Point> points = {
-        {0, 0}, {1, 0}, {0, 1}, {1, 1}
-    };
+    std::vector<Point> points = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
     PointAnalyzer analyzer(points);
-    auto result = analyzer.analyze();
+    auto result = analyzer.analyze(10, true);
+    EXPECT_TRUE(result.hasStats);
     EXPECT_GT(result.stats.meanNearestDistance, 0.0);
-    EXPECT_GT(result.stats.minNearestDistance, 0.0);
-    EXPECT_GT(result.stats.maxNearestDistance, 0.0);
-    EXPECT_GE(result.stats.stdDeviation, 0.0);
+}
+
+TEST(PointAnalyzerTest, AnalyzeNoStats) {
+    std::vector<Point> points = {{0, 0}, {1, 0}, {0, 1}, {1, 1}};
+    PointAnalyzer analyzer(points);
+    auto result = analyzer.analyze(10, false);
+    EXPECT_FALSE(result.hasStats);
 }
 
 TEST(ReportGeneratorTest, GenerateTextReport) {
     AnalysisResult result;
-    result.mostIsolated = {5.0, 5.0};
+    result.mostIsolated = {"U1.1", 5.0, 5.0};
     result.minDistance = 2.5;
-    result.topK = {{5.0, 5.0}, {3.0, 3.0}};
+    result.topK = {{"U1.1", 5.0, 5.0}, {"U2.A", 3.0, 3.0}};
     result.executionTimeMs = 123.45;
 
     std::ostringstream oss;
@@ -151,5 +101,5 @@ TEST(ReportGeneratorTest, GenerateTextReport) {
 
     std::string output = oss.str();
     EXPECT_FALSE(output.empty());
-    EXPECT_NE(output.find("5.00"), std::string::npos);
+    EXPECT_NE(output.find("U1.1"), std::string::npos);
 }

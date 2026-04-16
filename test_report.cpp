@@ -1,16 +1,15 @@
 #include "src/point_analyzer.h"
 #include "src/report_generator.h"
 #include <iostream>
-#include <vector>
+#include <unordered_map>
 
 int main() {
-    std::vector<Point> points = {
-        {0, 0}, {0.1, 0.1}, {0.2, 0.2}, {0.3, 0.3},
-        {5, 5}, {3, 3}, {7, 7}, {1, 1},
-        {2, 2}, {4, 4}
+    std::unordered_map<std::string, Point> named = {
+        {"U1.1", {0, 0}}, {"U1.2", {0.1, 0.1}}, {"U1.3", {0.2, 0.2}},
+        {"U2.A", {5, 5}}, {"U2.B", {3, 3}}, {"U3.CLK", {7, 7}}
     };
 
-    PointAnalyzer analyzer(points);
+    PointAnalyzer analyzer(named);
     AnalysisResult result = analyzer.analyze(5);
     result.executionTimeMs = 42.5;
 
