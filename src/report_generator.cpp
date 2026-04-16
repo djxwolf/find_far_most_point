@@ -71,30 +71,16 @@ void ReportGenerator::generate(const AnalysisResult& result,
         out << midBorder;
 
         // Table header
-        if (hasNames(result)) {
-            out << line(" Rank  Name              Dist       Pct");
-        } else {
-            out << line(" Rank  Coordinates        Dist       Pct");
-        }
+        out << line(" Rank  Name              Coordinates          Dist     Pct");
 
         // Table rows
         for (size_t i = 0; i < std::min(result.topK.size(), size_t(10)); ++i) {
             double pct = 100.0 * (1.0 - static_cast<double>(i) / result.topK.size());
             std::ostringstream row;
             row << " " << std::setw(4) << (i + 1) << "  ";
-            if (hasNames(result)) {
-                row << std::left << std::setw(18) << result.topK[i].name << std::right;
-            } else {
-                row << "(" << fmt(result.topK[i].x, 3) << ", "
-                    << fmt(result.topK[i].y, 3) << ")";
-                // pad to 18 chars
-                std::string coord = row.str().substr(6);
-                row.str("");
-                row << " " << std::setw(4) << (i + 1) << "  ";
-                row << std::left << std::setw(18) << coord << std::right;
-            }
-            row << fmt(result.topK[i].minDist, 4) << "    "
-                << fmt(pct, 1) << "%";
+            row << std::left << std::setw(18) << result.topK[i].name << std::right;
+            row << "(" << fmt(result.topK[i].x, 4) << ", " << fmt(result.topK[i].y, 4) << ")  ";
+            row << fmt(result.topK[i].minDist, 4) << "  " << fmt(pct, 1) << "%";
             out << line(row.str());
         }
 
