@@ -5,15 +5,33 @@ High-performance 2D point set analysis using KD-Tree for O(n log n) nearest neig
 ## Features
 
 - **Fast**: O(n log n) algorithm using KD-Tree (nanoflann)
+- **Multithreaded**: Parallel KNN queries across all CPU cores
 - **Scalable**: Handles millions of points efficiently
 - **Comprehensive**: Full analysis report with statistics and visualization
+
+## Performance (Apple M-series, 8 cores)
+
+| Points | Query Time | Speedup vs v1.0 |
+|--------|-----------|-----------------|
+| 100K   | ~5ms      | 15x             |
+| 500K   | ~39ms     | 14x             |
+| 1M     | ~131ms    | 15x             |
+| 5M     | ~883ms    | 16x             |
+
+*Query phase only (excludes KD-Tree build). Full run includes tree construction overhead.*
+
+### What changed in v1.1
+
+- **Merged traversal**: Three separate KNN passes combined into one (~3x)
+- **Deferred sqrt**: Squared-distance comparisons, sqrt only at final output
+- **Multithreaded queries**: `std::thread` parallelizes KNN lookups across all cores (~5x)
 
 ## Building
 
 ```bash
 mkdir build && cd build
-cmake ..
-make
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
 ```
 
 ## Usage
@@ -43,14 +61,6 @@ One point per line: `x,y`
 1.5,2.3
 0.998,0.002
 ```
-
-## Performance
-
-| Points | Time | Memory |
-|--------|------|--------|
-| 100K   | ~30ms| ~2.4MB |
-| 1M     | ~350ms| ~24MB |
-| 10M    | ~4s  | ~240MB |
 
 ## License
 

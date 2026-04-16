@@ -9,19 +9,11 @@ int main() {
         {5, 5}, {3, 3}, {7, 7}, {1, 1},
         {2, 2}, {4, 4}
     };
-    
+
     PointAnalyzer analyzer(points);
-    Point mostIsolated = analyzer.findMostIsolated();
-    auto topK = analyzer.findTopKIsolated(5);
-    Statistics stats = analyzer.computeStatistics();
-    
-    AnalysisResult result;
-    result.mostIsolated = mostIsolated;
-    result.minDistance = stats.maxNearestDistance; // Use max as approximation
-    result.topK = topK;
-    result.stats = stats;
+    AnalysisResult result = analyzer.analyze(5);
     result.executionTimeMs = 42.5;
-    
+
     ReportGenerator::generate(result, ReportFormat::Text, std::cout);
     return 0;
 }

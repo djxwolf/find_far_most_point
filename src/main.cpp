@@ -3,7 +3,6 @@
 #include <vector>
 #include <random>
 #include <chrono>
-#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -15,7 +14,6 @@ struct CommandLineArgs {
     unsigned int seed = std::random_device{}();
     std::string inputFile;
     size_t topK = 10;
-    bool benchmark = false;
 };
 
 void printUsage(const char* programName) {
@@ -25,7 +23,6 @@ void printUsage(const char* programName) {
               << "  --seed N          Random seed (default: random)\n"
               << "  --input FILE      Read points from file (one per line: x,y)\n"
               << "  --topK N          Show top N most isolated points (default: 10)\n"
-              << "  --benchmark       Run benchmark mode\n"
               << "  --help            Show this help message\n\n"
               << "Examples:\n"
               << "  " << programName << " --count 1000000 --seed 42\n"
@@ -47,8 +44,6 @@ CommandLineArgs parseArguments(int argc, char* argv[]) {
             args.inputFile = argv[++i];
         } else if (arg == "--topK" && i + 1 < argc) {
             args.topK = std::stoull(argv[++i]);
-        } else if (arg == "--benchmark") {
-            args.benchmark = true;
         } else {
             std::cerr << "Unknown option: " << arg << "\n";
             printUsage(argv[0]);
@@ -106,19 +101,10 @@ int main(int argc, char* argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
 
     PointAnalyzer analyzer(points);
-    Point mostIsolated = analyzer.findMostIsolated();
-    auto topK = analyzer.findTopKIsolated(args.topK);
-    Statistics stats = analyzer.computeStatistics();
+    AnalysisResult result = analyzer.analyze(args.topK);
 
     auto endTime = std::chrono::high_resolution_clock::now();
-    double elapsedMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
-
-    AnalysisResult result;
-    result.mostIsolated = mostIsolated;
-    result.minDistance = stats.minNearestDistance;
-    result.topK = topK;
-    result.stats = stats;
-    result.executionTimeMs = elapsedMs;
+    result.executionTimeMs = std::chrono::duration<double, std::milli>(endTime - startTime).count();
 
     ReportGenerator::generate(result, ReportFormat::Text);
 

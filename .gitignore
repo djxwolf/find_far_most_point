@@ -6,6 +6,7 @@ build/
 .idea/
 *.swp
 *.swo
+.cache/
 
 # OS
 .DS_Store

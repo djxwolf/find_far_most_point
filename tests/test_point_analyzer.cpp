@@ -40,10 +40,10 @@ TEST(KDTreeAdapterTest, PointCount) {
 TEST(KDTreeAdapterTest, GetPoint) {
     std::vector<Point> points = {{1.5, 2.5}, {3.5, 4.5}};
     KDTreeAdapter adapter(points);
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 0), 1.5);  // x of point 0
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 1), 2.5);  // y of point 0
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 0), 3.5);  // x of point 1
-    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 1), 4.5);  // y of point 1
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 0), 1.5);
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(0, 1), 2.5);
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 0), 3.5);
+    EXPECT_DOUBLE_EQ(adapter.kdtree_get_pt(1, 1), 4.5);
 }
 
 TEST(PointAnalyzerTest, ConstructorWithEmptyPoints) {
@@ -56,95 +56,87 @@ TEST(PointAnalyzerTest, ConstructorWithEmptyPoints) {
 TEST(PointAnalyzerTest, ConstructorWithPoints) {
     std::vector<Point> points = {{0, 0}, {1, 1}, {2, 2}};
     PointAnalyzer analyzer(points);
-    // Should build KD-Tree without throwing
     SUCCEED();
 }
 
-TEST(PointAnalyzerTest, FindMostIsolatedSinglePoint) {
+TEST(PointAnalyzerTest, AnalyzeSinglePoint) {
     std::vector<Point> points = {{5, 5}};
     PointAnalyzer analyzer(points);
-    Point result = analyzer.findMostIsolated();
-    EXPECT_DOUBLE_EQ(result.x, 5.0);
-    EXPECT_DOUBLE_EQ(result.y, 5.0);
+    auto result = analyzer.analyze();
+    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 5.0);
+    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 5.0);
 }
 
-TEST(PointAnalyzerTest, FindMostIsolatedTwoPoints) {
+TEST(PointAnalyzerTest, AnalyzeTwoPoints) {
     std::vector<Point> points = {{0, 0}, {10, 10}};
     PointAnalyzer analyzer(points);
-    Point result = analyzer.findMostIsolated();
-    EXPECT_TRUE(result.x == 0.0 || result.x == 10.0);
+    auto result = analyzer.analyze();
+    EXPECT_TRUE(result.mostIsolated.x == 0.0 || result.mostIsolated.x == 10.0);
 }
 
-TEST(PointAnalyzerTest, FindMostIsolatedCluster) {
+TEST(PointAnalyzerTest, AnalyzeCluster) {
     std::vector<Point> points = {
         {0, 0}, {0.1, 0.1}, {0.2, 0.2},
         {5, 5}
     };
     PointAnalyzer analyzer(points);
-    Point result = analyzer.findMostIsolated();
-    EXPECT_DOUBLE_EQ(result.x, 5.0);
-    EXPECT_DOUBLE_EQ(result.y, 5.0);
+    auto result = analyzer.analyze();
+    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 5.0);
+    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 5.0);
 }
 
-TEST(PointAnalyzerTest, FindMostIsolatedEmpty) {
+TEST(PointAnalyzerTest, AnalyzeEmpty) {
     std::vector<Point> points;
     PointAnalyzer analyzer(points);
-    Point result = analyzer.findMostIsolated();
-    EXPECT_DOUBLE_EQ(result.x, 0.0);
-    EXPECT_DOUBLE_EQ(result.y, 0.0);
+    auto result = analyzer.analyze();
+    EXPECT_DOUBLE_EQ(result.mostIsolated.x, 0.0);
+    EXPECT_DOUBLE_EQ(result.mostIsolated.y, 0.0);
 }
 
-TEST(PointAnalyzerTest, FindTopKIsolated) {
+TEST(PointAnalyzerTest, AnalyzeTopK) {
     std::vector<Point> points = {
         {0, 0}, {0.1, 0.1}, {0.2, 0.2},
         {5, 5},
         {3, 3}
     };
     PointAnalyzer analyzer(points);
-    auto top3 = analyzer.findTopKIsolated(3);
-    EXPECT_EQ(top3.size(), 3);
-    EXPECT_DOUBLE_EQ(top3[0].x, 5.0);
-    EXPECT_DOUBLE_EQ(top3[1].x, 3.0);
+    auto result = analyzer.analyze(3);
+    EXPECT_EQ(result.topK.size(), 3);
+    EXPECT_DOUBLE_EQ(result.topK[0].x, 5.0);
+    EXPECT_DOUBLE_EQ(result.topK[1].x, 3.0);
 }
 
-TEST(PointAnalyzerTest, FindTopKIsolatedKGreaterThanPoints) {
+TEST(PointAnalyzerTest, AnalyzeTopKGreaterThanPoints) {
     std::vector<Point> points = {{0, 0}, {1, 1}};
     PointAnalyzer analyzer(points);
-    auto top5 = analyzer.findTopKIsolated(5);
-    EXPECT_EQ(top5.size(), 2);
+    auto result = analyzer.analyze(5);
+    EXPECT_EQ(result.topK.size(), 2);
 }
 
-TEST(PointAnalyzerTest, FindTopKIsolatedEmpty) {
+TEST(PointAnalyzerTest, AnalyzeStatisticsEmpty) {
     std::vector<Point> points;
     PointAnalyzer analyzer(points);
-    auto top3 = analyzer.findTopKIsolated(3);
-    EXPECT_TRUE(top3.empty());
+    auto result = analyzer.analyze();
+    EXPECT_DOUBLE_EQ(result.stats.minNearestDistance, 0.0);
 }
 
-TEST(PointAnalyzerTest, ComputeStatisticsEmpty) {
-    std::vector<Point> points;
-    PointAnalyzer analyzer(points);
-    Statistics stats = analyzer.computeStatistics();
-    EXPECT_DOUBLE_EQ(stats.minNearestDistance, 0.0);
-}
-
-TEST(PointAnalyzerTest, ComputeStatisticsSinglePoint) {
+TEST(PointAnalyzerTest, AnalyzeStatisticsSinglePoint) {
     std::vector<Point> points = {{5, 5}};
     PointAnalyzer analyzer(points);
-    Statistics stats = analyzer.computeStatistics();
-    EXPECT_EQ(stats.distribution.size(), 0);
+    auto result = analyzer.analyze();
+    EXPECT_EQ(result.stats.distribution.size(), 0);
 }
 
-TEST(PointAnalyzerTest, ComputeStatisticsBasic) {
+TEST(PointAnalyzerTest, AnalyzeStatisticsBasic) {
     std::vector<Point> points = {
         {0, 0}, {1, 0}, {0, 1}, {1, 1}
     };
     PointAnalyzer analyzer(points);
-    Statistics stats = analyzer.computeStatistics();
-    EXPECT_GT(stats.meanNearestDistance, 0.0);
-    EXPECT_GT(stats.minNearestDistance, 0.0);
-    EXPECT_GT(stats.maxNearestDistance, 0.0);
-    EXPECT_GE(stats.stdDeviation, 0.0);
+    auto result = analyzer.analyze();
+    EXPECT_GT(result.stats.meanNearestDistance, 0.0);
+    EXPECT_GT(result.stats.minNearestDistance, 0.0);
+    EXPECT_GT(result.stats.maxNearestDistance, 0.0);
+    EXPECT_GE(result.stats.stdDeviation, 0.0);
 }
 
 TEST(ReportGeneratorTest, GenerateTextReport) {

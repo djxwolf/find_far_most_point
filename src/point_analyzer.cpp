@@ -3,17 +3,14 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <thread>
 
 namespace {
     double computeMedian(std::vector<double>& v) {
         if (v.empty()) return 0.0;
         std::sort(v.begin(), v.end());
         size_t n = v.size();
-        if (n % 2 == 0) {
-            return (v[n/2 - 1] + v[n/2]) / 2.0;
-        } else {
-            return v[n/2];
-        }
+        return (n % 2 == 0) ? (v[n/2 - 1] + v[n/2]) / 2.0 : v[n/2];
     }
 
     double computeStdDev(const std::vector<double>& v, double mean) {
@@ -31,143 +28,113 @@ PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
     : points_(points)
     , adapter_(points_)
 {
-    // Build KD-Tree index
     if (!points_.empty()) {
         kdtree_ = std::make_unique<KDTree>(
-            2 /* dimension */,
-            adapter_,
-            nanoflann::KDTreeSingleIndexAdaptorParams(10 /* max leaf */)
+            2, adapter_, nanoflann::KDTreeSingleIndexAdaptorParams(10)
         );
         kdtree_->buildIndex();
     }
 }
 
-Point PointAnalyzer::findMostIsolated() {
-    if (points_.empty()) {
-        return {0.0, 0.0};
-    }
-    if (points_.size() == 1) {
-        return points_[0];
+AnalysisResult PointAnalyzer::analyze(size_t topK) {
+    AnalysisResult result;
+    const size_t n = points_.size();
+
+    if (n == 0) return result;
+    if (n == 1) {
+        result.mostIsolated = points_[0];
+        result.minDistance = 0.0;
+        result.topK.push_back(points_[0]);
+        return result;
     }
 
-    double maxMinDistance = -1.0;
+    // Phase 1: compute squared nearest-neighbor distances in parallel
+    std::vector<double> sqDists(n);
+
+    const unsigned hwThreads = std::thread::hardware_concurrency();
+    const unsigned numThreads = std::max(1u, hwThreads ? hwThreads : 1u);
+    const size_t chunkSize = (n + numThreads - 1) / numThreads;
+
+    std::vector<std::thread> threads;
+    threads.reserve(numThreads);
+    for (unsigned t = 0; t < numThreads; ++t) {
+        const size_t start = t * chunkSize;
+        const size_t end = std::min(start + chunkSize, n);
+        if (start >= n) break;
+        threads.emplace_back([this, &sqDists, start, end]() {
+            for (size_t i = start; i < end; ++i) {
+                const double query_pt[2] = {points_[i].x, points_[i].y};
+                std::array<size_t, 2> indices;
+                std::array<double, 2> out_dists_sqr;
+                nanoflann::KNNResultSet<double> resultSet(2);
+                resultSet.init(indices.data(), out_dists_sqr.data());
+                kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
+                sqDists[i] = (indices[0] == i) ? out_dists_sqr[1] : out_dists_sqr[0];
+            }
+        });
+    }
+    for (auto& th : threads) th.join();
+
+    // Phase 2: most isolated point (compare on squared distances)
     size_t farthestIdx = 0;
-
-    for (size_t i = 0; i < points_.size(); ++i) {
-        const double query_pt[2] = {points_[i].x, points_[i].y};
-        std::array<size_t, 2> indices;
-        std::array<double, 2> distances_sqr;
-        nanoflann::KNNResultSet<double> resultSet(2);
-        resultSet.init(indices.data(), distances_sqr.data());
-        kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
-
-        double minDistance = std::sqrt((indices[0] == i) ? distances_sqr[1] : distances_sqr[0]);
-
-        if (minDistance > maxMinDistance) {
-            maxMinDistance = minDistance;
+    double maxSqDist = sqDists[0];
+    for (size_t i = 1; i < n; ++i) {
+        if (sqDists[i] > maxSqDist) {
+            maxSqDist = sqDists[i];
             farthestIdx = i;
         }
     }
-    return points_[farthestIdx];
-}
+    result.mostIsolated = points_[farthestIdx];
+    result.minDistance = std::sqrt(maxSqDist);
 
-std::vector<Point> PointAnalyzer::findTopKIsolated(size_t k) {
-    if (points_.empty() || k == 0) {
-        return {};
+    // Phase 3: top-K (partial_sort on squared distances)
+    std::vector<size_t> order(n);
+    std::iota(order.begin(), order.end(), 0);
+    const size_t k = std::min(topK, n);
+    std::partial_sort(order.begin(), order.begin() + k, order.end(),
+        [&sqDists](size_t a, size_t b) { return sqDists[a] > sqDists[b]; });
+    result.topK.resize(k);
+    for (size_t i = 0; i < k; ++i) {
+        result.topK[i] = points_[order[i]];
     }
 
-    struct PointWithDistance {
-        Point point;
-        double minDistance;
-        size_t index;
-    };
-
-    std::vector<PointWithDistance> pointsWithDist;
-    pointsWithDist.reserve(points_.size());
-
-    for (size_t i = 0; i < points_.size(); ++i) {
-        const double query_pt[2] = {points_[i].x, points_[i].y};
-        std::array<size_t, 2> indices;
-        std::array<double, 2> distances_sqr;
-        nanoflann::KNNResultSet<double> resultSet(2);
-        resultSet.init(indices.data(), distances_sqr.data());
-        kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
-
-        double minDistance;
-        if (points_.size() == 1) {
-            minDistance = 0.0;
-        } else {
-            minDistance = std::sqrt((indices[0] == i) ? distances_sqr[1] : distances_sqr[0]);
-        }
-        pointsWithDist.push_back({points_[i], minDistance, i});
+    // Phase 4: statistics (sqrt once, then aggregate)
+    std::vector<double> dists(n);
+    for (size_t i = 0; i < n; ++i) {
+        dists[i] = std::sqrt(sqDists[i]);
     }
 
-    std::sort(pointsWithDist.begin(), pointsWithDist.end(),
-        [](const PointWithDistance& a, const PointWithDistance& b) {
-            return a.minDistance > b.minDistance;
-        });
+    auto& stats = result.stats;
+    stats.minNearestDistance = *std::min_element(dists.begin(), dists.end());
+    stats.maxNearestDistance = *std::max_element(dists.begin(), dists.end());
 
-    size_t resultSize = std::min(k, pointsWithDist.size());
-    std::vector<Point> result;
-    result.reserve(resultSize);
+    double sum = 0.0;
+    for (double d : dists) sum += d;
+    stats.meanNearestDistance = sum / static_cast<double>(n);
 
-    for (size_t i = 0; i < resultSize; ++i) {
-        result.push_back(pointsWithDist[i].point);
-    }
+    stats.medianNearestDistance = computeMedian(dists);
+    stats.stdDeviation = computeStdDev(dists, stats.meanNearestDistance);
 
-    return result;
-}
-
-Statistics PointAnalyzer::computeStatistics() {
-    Statistics stats;
-    if (points_.empty() || points_.size() == 1) {
-        return stats;
-    }
-
-    std::vector<double> nearestDistances;
-    nearestDistances.reserve(points_.size());
-
-    for (size_t i = 0; i < points_.size(); ++i) {
-        const double query_pt[2] = {points_[i].x, points_[i].y};
-        std::array<size_t, 2> indices;
-        std::array<double, 2> distances_sqr;
-        nanoflann::KNNResultSet<double> resultSet(2);
-        resultSet.init(indices.data(), distances_sqr.data());
-        kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
-
-        double minDistance = std::sqrt((indices[0] == i) ? distances_sqr[1] : distances_sqr[0]);
-        nearestDistances.push_back(minDistance);
-    }
-
-    stats.minNearestDistance = *std::min_element(nearestDistances.begin(), nearestDistances.end());
-    stats.maxNearestDistance = *std::max_element(nearestDistances.begin(), nearestDistances.end());
-
-    double sum = std::accumulate(nearestDistances.begin(), nearestDistances.end(), 0.0);
-    stats.meanNearestDistance = sum / static_cast<double>(nearestDistances.size());
-
-    stats.medianNearestDistance = computeMedian(nearestDistances);
-    stats.stdDeviation = computeStdDev(nearestDistances, stats.meanNearestDistance);
-
-    // Create histogram (10 bins)
+    // Histogram (10 bins)
     const size_t numBins = 10;
-    double binWidth = (stats.maxNearestDistance - stats.minNearestDistance) / numBins;
-
+    double binWidth = (stats.maxNearestDistance - stats.minNearestDistance) / static_cast<double>(numBins);
     if (binWidth > 0) {
         std::vector<size_t> binCounts(numBins, 0);
-        for (double dist : nearestDistances) {
-            size_t binIndex = static_cast<size_t>((dist - stats.minNearestDistance) / binWidth);
-            if (binIndex >= numBins) binIndex = numBins - 1;
-            binCounts[binIndex]++;
+        for (double d : dists) {
+            size_t bin = static_cast<size_t>((d - stats.minNearestDistance) / binWidth);
+            if (bin >= numBins) bin = numBins - 1;
+            binCounts[bin]++;
         }
+        stats.distribution.reserve(numBins);
         for (size_t i = 0; i < numBins; ++i) {
             HistogramBin bin;
             bin.lowerBound = stats.minNearestDistance + i * binWidth;
             bin.upperBound = bin.lowerBound + binWidth;
             bin.count = binCounts[i];
-            bin.percentage = (binCounts[i] * 100.0) / nearestDistances.size();
+            bin.percentage = (binCounts[i] * 100.0) / static_cast<double>(n);
             stats.distribution.push_back(bin);
         }
     }
 
-    return stats;
+    return result;
 }
