@@ -1,3 +1,0 @@
-/Users/wenjian/work/find_far_most_point/build/CMakeFiles/point_analyzer.dir
-/Users/wenjian/work/find_far_most_point/build/CMakeFiles/edit_cache.dir
-/Users/wenjian/work/find_far_most_point/build/CMakeFiles/rebuild_cache.dir

@@ -1,5 +1,0 @@
-if(EXISTS "/Users/wenjian/work/find_far_most_point/build/test_point_analyzer[1]_tests.cmake")
-  include("/Users/wenjian/work/find_far_most_point/build/test_point_analyzer[1]_tests.cmake")
-else()
-  add_test(test_point_analyzer_NOT_BUILT test_point_analyzer_NOT_BUILT)
-endif()
