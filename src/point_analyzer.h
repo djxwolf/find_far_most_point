@@ -61,6 +61,7 @@ private:
 };
 
 #include <nanoflann.hpp>
+#include "BS_thread_pool.hpp"
 
 using KDTree = nanoflann::KDTreeSingleIndexAdaptor<
     nanoflann::L2_Simple_Adaptor<double, KDTreeAdapter>,
@@ -83,6 +84,7 @@ private:
     std::vector<std::string> names_;
     std::unique_ptr<KDTree> kdtree_;
     KDTreeAdapter adapter_;
+    BS::thread_pool<> pool_;
 
     void buildIndex();
 };

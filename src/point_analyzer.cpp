@@ -3,7 +3,6 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
-#include <thread>
 
 namespace {
     double computeMedian(std::vector<double>& v) {
@@ -68,17 +67,8 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
     // Phase 1: compute squared nearest-neighbor distances in parallel
     std::vector<double> sqDists(n);
 
-    const unsigned hwThreads = std::thread::hardware_concurrency();
-    const unsigned numThreads = std::max(1u, hwThreads ? hwThreads : 1u);
-    const size_t chunkSize = (n + numThreads - 1) / numThreads;
-
-    std::vector<std::thread> threads;
-    threads.reserve(numThreads);
-    for (unsigned t = 0; t < numThreads; ++t) {
-        const size_t start = t * chunkSize;
-        const size_t end = std::min(start + chunkSize, n);
-        if (start >= n) break;
-        threads.emplace_back([this, &sqDists, start, end]() {
+    pool_.submit_blocks<size_t>(0, n,
+        [this, &sqDists](const size_t start, const size_t end) {
             for (size_t i = start; i < end; ++i) {
                 const double query_pt[2] = {points_[i].x, points_[i].y};
                 std::array<size_t, 2> indices;
@@ -88,9 +78,8 @@ AnalysisResult PointAnalyzer::analyze(size_t topK, bool computeStats) {
                 kdtree_->findNeighbors(resultSet, query_pt, nanoflann::SearchParameters());
                 sqDists[i] = (indices[0] == i) ? out_dists_sqr[1] : out_dists_sqr[0];
             }
-        });
-    }
-    for (auto& th : threads) th.join();
+        }
+    ).wait();
 
     // Phase 2: most isolated point (compare on squared distances)
     size_t farthestIdx = 0;
