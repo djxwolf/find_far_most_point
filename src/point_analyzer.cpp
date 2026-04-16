@@ -49,6 +49,9 @@ PointAnalyzer::PointAnalyzer(const std::vector<Point>& points)
     , names_(points.size())
     , adapter_(points_)
 {
+    for (size_t i = 0; i < points.size(); ++i) {
+        names_[i] = "P" + std::to_string(i + 1);
+    }
     buildIndex();
 }
 
